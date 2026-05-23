@@ -1359,7 +1359,7 @@ android {
             buildConfigField 'boolean', 'CHECK_FILESYSTEM_MD5', 'false'
 
             //this is the default github release for filesystems to use if not overwritten by a custom url
-            buildConfigField 'String', 'DEFAULT_RELEASE', "\"debian:tags/v0.0.15,ubuntu:tags/v0.0.21,kali:tags/v0.0.10\""
+            buildConfigField 'String', 'DEFAULT_RELEASE', "\"alpine:tags/v0.0.9,arch:tags/v0.0.6,debian:tags/v0.0.15,ubuntu:tags/v0.0.21,kali:tags/v0.0.10\""
 
             //this controls if we use the DownloadManager
             buildConfigField 'boolean', 'USE_DOWNLOAD_MANAGER', 'true'
