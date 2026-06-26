@@ -130,6 +130,9 @@ android {
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
 
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
+
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.aicli.provider.fileprovider\""
         }
@@ -242,6 +245,9 @@ android {
 
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
+
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
 
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.andacious.provider.fileprovider\""
@@ -357,6 +363,9 @@ android {
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
 
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
+
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.birdbox.provider.fileprovider\""
         }
@@ -469,6 +478,9 @@ android {
 
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
+
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
 
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.foxbox_pro.provider.fileprovider\""
@@ -583,6 +595,9 @@ android {
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
 
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
+
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.gimp.provider.fileprovider\""
         }
@@ -695,6 +710,9 @@ android {
 
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
+
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
 
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.idle.provider.fileprovider\""
@@ -809,6 +827,9 @@ android {
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
 
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
+
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.inkscape.provider.fileprovider\""
         }
@@ -921,6 +942,9 @@ android {
 
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
+
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
 
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.libredocs.provider.fileprovider\""
@@ -1035,6 +1059,9 @@ android {
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
 
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
+
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.octave.provider.fileprovider\""
         }
@@ -1147,6 +1174,9 @@ android {
 
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
+
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
 
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.r.provider.fileprovider\""
@@ -1261,6 +1291,9 @@ android {
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
 
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
+
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.devstudio.provider.fileprovider\""
         }
@@ -1374,6 +1407,9 @@ android {
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
 
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'false'
+
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.gnuplot.provider.fileprovider\""
         }
@@ -1486,6 +1522,9 @@ android {
 
             //has a10 shmem proot build
             buildConfigField 'boolean', 'HAS_A10_PROOT', 'true'
+
+            //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
+            buildConfigField 'boolean', 'USE_OCI_IMAGE', 'true'
 
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.provider.fileprovider\""
