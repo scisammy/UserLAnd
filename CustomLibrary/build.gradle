@@ -16,6 +16,10 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
+
+        // OCI image tag to pull; format matches DEFAULT_RELEASE: either a single tag
+        // ("latest") or comma-separated "distro:tag" pairs ("ubuntu:20260626,arch:20260626").
+        buildConfigField 'String', 'DEFAULT_OCI_TAG', '"latest"'
     }
 
     flavorDimensions "app"
