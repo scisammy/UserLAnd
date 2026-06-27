@@ -2,4 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- adbndk requires minSdk 28; suppress the merge error since AVF only runs on API 33+
+         and is gated by ENABLE_AVF_BACKEND at runtime -->
+    <uses-sdk tools:overrideLibrary="tech.userland.adbndk"/>
+
 </manifest>

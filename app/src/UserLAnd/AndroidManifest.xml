@@ -4,12 +4,26 @@
 
     <uses-permission android:name="android.permission.CAMERA" tools:node="remove"/>
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:node="remove"/>
+    <uses-permission android:name="tech.userland.avfrunner.permission.CONTROL" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <queries>
+        <package android:name="tech.userland.avfrunner" />
+    </queries>
 
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_main_launcher"
         android:roundIcon="@mipmap/ic_main_launcher_round"
         android:supportsRtl="true">
+
+        <receiver
+            android:name="tech.ula.library.ui.AvfPairingReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="tech.ula.library.AVF_PAIR" />
+            </intent-filter>
+        </receiver>
 
         <activity android:name="tech.ula.library.MainActivity" android:launchMode="singleTask" android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|density|screenLayout" android:exported="true">
             <intent-filter>

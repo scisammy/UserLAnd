@@ -133,7 +133,25 @@ android {
         }
     }
 
+    // Don't re-compress the APK asset — it's a compressed binary.
+    aaptOptions {
+        noCompress "apk"
+    }
+
 }
+
+// Copy avf-runner.apk from the sibling build output for the UserLAnd flavor.
+// Run `cd ../avf/avf-runner && ./gradlew assembleDebug` first.
+tasks.register('copyAvfRunnerApk', Copy) {
+    def src = file("../../../avf/avf-runner/app/build/outputs/apk/debug/app-debug.apk")
+    def assetsDir = file("src/UserLAnd/assets")
+    onlyIf { src.exists() }
+    from src
+    into assetsDir
+    rename { "avf-runner.apk" }
+    doFirst { assetsDir.mkdirs() }
+}
+preBuild.dependsOn 'copyAvfRunnerApk'
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"

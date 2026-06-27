@@ -20,6 +20,9 @@ android {
         // OCI image tag to pull; format matches DEFAULT_RELEASE: either a single tag
         // ("latest") or comma-separated "distro:tag" pairs ("ubuntu:20260626,arch:20260626").
         buildConfigField 'String', 'DEFAULT_OCI_TAG', '"latest"'
+
+        // controls whether the AVF (virtual machine) backend is available in this flavor
+        buildConfigField 'boolean', 'ENABLE_AVF_BACKEND', 'false'
     }
 
     flavorDimensions "app"
@@ -1529,6 +1532,9 @@ android {
 
             //controls whether to download filesystems as OCI images from ghcr.io instead of tar.gz from GitHub releases
             buildConfigField 'boolean', 'USE_OCI_IMAGE', 'true'
+
+            //enables the AVF (virtual machine) backend and ADB install wizard
+            buildConfigField 'boolean', 'ENABLE_AVF_BACKEND', 'true'
 
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.provider.fileprovider\""
