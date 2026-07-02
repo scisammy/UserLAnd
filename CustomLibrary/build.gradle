@@ -23,6 +23,9 @@ android {
 
         // controls whether the AVF (virtual machine) backend is available in this flavor
         buildConfigField 'boolean', 'ENABLE_AVF_BACKEND', 'false'
+
+        // controls whether the QEMU full-system emulation backend is available in this flavor
+        buildConfigField 'boolean', 'ENABLE_QEMU_BACKEND', 'false'
     }
 
     flavorDimensions "app"
@@ -1535,6 +1538,9 @@ android {
 
             //enables the AVF (virtual machine) backend and ADB install wizard
             buildConfigField 'boolean', 'ENABLE_AVF_BACKEND', 'true'
+
+            //enables the QEMU full-system emulation backend
+            buildConfigField 'boolean', 'ENABLE_QEMU_BACKEND', 'true'
 
             //Need unique provider authorities
             buildConfigField 'String', 'PROVIDER_AUTHORITY', "\"tech.ula.provider.fileprovider\""
