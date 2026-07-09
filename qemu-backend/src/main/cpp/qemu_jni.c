@@ -158,7 +158,7 @@ Java_tech_ula_library_qemu_QemuBridge_start(
         ",hostfwd=tcp:127.0.0.1:2022-:2022"
         ",hostfwd=tcp:127.0.0.1:5901-:5901";
 
-    int max_argc = 23 + nmounts * 4 + (has_rootfs ? 4 : 0) + (has_disk ? 4 : 0);
+    int max_argc = 27 + nmounts * 4 + (has_rootfs ? 4 : 0) + (has_disk ? 4 : 0);
     QemuArgs *args = malloc(sizeof(QemuArgs));
     args->argv = malloc(sizeof(char *) * (max_argc + 1));
     int i = 0;
@@ -166,10 +166,21 @@ Java_tech_ula_library_qemu_QemuBridge_start(
 #define PUSH(s) args->argv[i++] = strdup(s)
     PUSH("qemu-system-aarch64");
     PUSH("-M");      PUSH("virt");
+    PUSH("-accel");  PUSH("tcg");
     PUSH("-cpu");    PUSH("cortex-a57");
     PUSH("-m");      PUSH(ram_str);
     PUSH("-nographic");
     PUSH("-no-reboot");
+    // -nographic alone still leaves QEMU's default behavior of layering the interactive
+    // monitor onto stdio alongside the serial console. There's no real TTY behind stdio in
+    // this embedded pthread (qemu_android_main() runs as a library call inside the app
+    // process, not a standalone process launched from a shell) -- the monitor reads EOF
+    // from it almost immediately, which qemu_android_main() treats as a quit command,
+    // returning and ending the whole VM within under a second of starting. Confirmed live:
+    // logcat showed the "(qemu)" monitor prompt print immediately followed by "QEMU thread
+    // exited". The monitor isn't used by anything here (control is entirely via the guest
+    // console/vsock, not QMP/HMP), so disabling it outright is correct, not just a workaround.
+    PUSH("-monitor"); PUSH("none");
     PUSH("-kernel"); PUSH(kernel);
     PUSH("-initrd"); PUSH(initrd);
     PUSH("-append"); PUSH(cmdline);
