@@ -140,18 +140,22 @@ android {
 
 }
 
-// Copy avf-runner.apk from the sibling build output for the UserLAnd flavor.
-// Run `cd ../avf/avf-runner && ./gradlew assembleDebug` first.
-tasks.register('copyAvfRunnerApk', Copy) {
-    def src = file("../../../avf/avf-runner/app/build/outputs/apk/debug/app-debug.apk")
+// Copy userland-vm.apk from the companion UserLAnd-VM app's build output for the UserLAnd
+// flavor. Run `cd ~/UserLAnd-VM && ./gradlew assembleDebug` first. UserLAnd-VM is its own repo
+// (github.com/CypherpunkArmory/UserLAnd-VM), not a sibling directory of this repo, so its
+// checkout location is resolved from a Gradle property (-PuserLandVmDir=...) with a fallback
+// to ~/UserLAnd-VM rather than a relative path.
+tasks.register('copyUserLandVmApk', Copy) {
+    def vmDir = project.findProperty('userLandVmDir') ?: "${System.getProperty('user.home')}/UserLAnd-VM"
+    def src = file("${vmDir}/app/build/outputs/apk/debug/app-debug.apk")
     def assetsDir = file("src/UserLAnd/assets")
     onlyIf { src.exists() }
     from src
     into assetsDir
-    rename { "avf-runner.apk" }
+    rename { "userland-vm.apk" }
     doFirst { assetsDir.mkdirs() }
 }
-preBuild.dependsOn 'copyAvfRunnerApk'
+preBuild.dependsOn 'copyUserLandVmApk'
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
