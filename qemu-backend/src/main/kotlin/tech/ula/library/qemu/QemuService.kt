@@ -30,9 +30,26 @@ class QemuService : LifecycleService() {
         private const val READ_BUF_SIZE = 4096
 
         @Volatile var instance: QemuService? = null
+
+        /**
+         * Suspends until the native QEMU worker backing the *previous* session has actually
+         * exited, or [timeoutMs] elapses. QemuBridge.isRunning() is the sole source of truth
+         * for this (see qemu_jni.c's stop() fix): true means it's now safe to start a new
+         * session in this process; false means the old one is still running — normally, still
+         * within stop()'s 5s grace period, or genuinely wedged past it (see
+         * QemuBridge.isStuck()) — and starting a new one now would collide with it.
+         */
+        suspend fun awaitStopped(timeoutMs: Long = 6_000L): Boolean {
+            val deadline = System.currentTimeMillis() + timeoutMs
+            while (QemuBridge.isRunning()) {
+                if (System.currentTimeMillis() >= deadline) return false
+                delay(100)
+            }
+            return true
+        }
     }
 
-    enum class State { STOPPED, STARTING, RUNNING, ERROR, CORRUPTED }
+    enum class State { STOPPED, STARTING, RUNNING, ERROR, CORRUPTED, STUCK }
 
     private var consoleFd = -1
     private lateinit var rootfs: RootfsManager
@@ -63,9 +80,12 @@ class QemuService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        // Don't also set _state here: stopQemu() now sets it itself once the native stop
+        // actually finishes (STOPPED) or gives up waiting (STUCK) -- setting STOPPED
+        // unconditionally at this point used to claim success before the async native call
+        // even ran.
         stopQemu()
         instance = null
-        _state.value = State.STOPPED
         super.onDestroy()
     }
 
@@ -140,9 +160,21 @@ class QemuService : LifecycleService() {
         consoleFd = -1
         if (fd >= 0) QemuBridge.closeConsole(fd)
         if (QemuBridge.isRunning()) {
-            Thread({ QemuBridge.stop() }, "qemu-stop").apply { isDaemon = true; start() }
+            // Runs on its own thread rather than lifecycleScope: this is frequently called
+            // from onDestroy(), by which point the service's lifecycleScope is already being
+            // torn down and a coroutine launched on it here could be cancelled before
+            // QemuBridge.stop() (which blocks natively for up to 5s) ever completes.
+            // _state is only set once stop() actually returns -- unlike the previous
+            // unconditional State.STOPPED below, this can't claim success while stop() is
+            // still running, and reflects State.STUCK rather than STOPPED when it gave up
+            // waiting on a genuinely wedged native thread (see qemu_jni.c's stop()/isStuck()).
+            Thread({
+                QemuBridge.stop()
+                _state.value = if (QemuBridge.isRunning()) State.STUCK else State.STOPPED
+            }, "qemu-stop").apply { isDaemon = true; start() }
+        } else {
+            _state.value = State.STOPPED
         }
-        _state.value = State.STOPPED
     }
 
     private fun startConsoleReader(fd: Int) {

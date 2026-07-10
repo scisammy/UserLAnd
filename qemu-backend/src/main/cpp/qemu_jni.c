@@ -23,6 +23,12 @@ typedef struct {
 
 static volatile bool   s_running = false;
 static volatile bool   s_stopping = false;
+// Set when a stop() call times out waiting for the worker thread and hands it off to a
+// detached reaper instead of joining it inline. isRunning() alone already keeps refusing new
+// start() calls for as long as the thread is actually alive (see qemu_thread()'s own
+// s_running = false on exit), but s_stuck gives the Kotlin side a way to tell "still running
+// normally" apart from "wedged past its shutdown deadline" for logging/diagnostics.
+static volatile bool   s_stuck = false;
 static pthread_t       s_thread;
 static pthread_mutex_t s_mutex        = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  s_stopped_cond = PTHREAD_COND_INITIALIZER;
@@ -248,6 +254,36 @@ Java_tech_ula_library_qemu_QemuBridge_start(
 
 extern void qemu_system_shutdown_request(int cause);
 
+// Joins a QEMU worker thread that was still alive when stop()'s 5s grace period expired, once
+// it eventually does exit on its own. Runs detached so stop() never blocks past its deadline
+// waiting for this. [arg] is a heap-allocated copy of the pthread_t captured at timeout time —
+// not the s_thread global directly, since a later start() is free to overwrite s_thread with a
+// new thread's id as soon as s_running goes false (which only qemu_thread() itself can do, on
+// its *own* actual exit), and by then this reaper must already be joining the right handle.
+static void *reap_stuck_thread(void *arg) {
+    pthread_t *tid = (pthread_t *)arg;
+    pthread_join(*tid, NULL);
+    free(tid);
+
+    pthread_mutex_lock(&s_mutex);
+    s_stuck = false;
+    // stop() deliberately left s_stopping set instead of clearing it in the timed-out branch,
+    // specifically so a second stop() call made while this reaper is still in flight can't
+    // also see s_running == true and race it into spawning a *second* reaper joining this same
+    // pthread_t concurrently (pthread_join on the same target from two threads at once is
+    // undefined behavior, not just redundant). Only this reaper — the one holding the actual
+    // join result — is allowed to clear it, now that the thread is confirmed gone.
+    s_stopping = false;
+    if (s_socket_path[0]) {
+        unlink(s_socket_path);
+        LOGI("Removed socket %s (stuck QEMU thread finally exited)", s_socket_path);
+        s_socket_path[0] = '\0';
+    }
+    pthread_mutex_unlock(&s_mutex);
+    LOGI("Stuck QEMU thread finally exited");
+    return NULL;
+}
+
 JNIEXPORT void JNICALL
 Java_tech_ula_library_qemu_QemuBridge_stop(JNIEnv *env, jobject thiz)
 {
@@ -279,17 +315,44 @@ Java_tech_ula_library_qemu_QemuBridge_stop(JNIEnv *env, jobject thiz)
     pthread_mutex_lock(&s_mutex);
     while (s_running) {
         if (pthread_cond_timedwait(&s_stopped_cond, &s_mutex, &ts) == ETIMEDOUT) {
-            LOGE("QEMU thread did not exit in 5 s; forcing s_running=false");
-            s_running = false;
             timed_out = true;
             break;
         }
     }
     pthread_mutex_unlock(&s_mutex);
 
-    if (!timed_out) {
-        pthread_join(s_thread, NULL);
+    if (timed_out) {
+        // qemu_system_shutdown_request() is supposed to make qemu_main_loop() return almost
+        // instantly (qemu_notify_event() wakes the main loop immediately, and
+        // main_loop_should_exit() treats any pending shutdown cause, including this
+        // HOST_SIGNAL one, as unconditional), so hitting this path means QEMU is genuinely
+        // wedged, not just running a little slow. Previously this branch forced
+        // s_running = false here anyway, which lied to isRunning() and let a subsequent
+        // start() launch a *second* qemu_android_main() into the same process while the first
+        // was still alive — the two then collided on every QEMU global (chardev registry,
+        // block layer, machine state, ...), which is how "Duplicate ID 'con0' for chardev"
+        // (and, very plausibly, the FORTIFY pthread_mutex_lock-on-destroyed-mutex abort seen
+        // in the same session) showed up. Leave s_running exactly as it is — only
+        // qemu_thread() clears it, exactly when qemu_android_main() actually returns — and
+        // hand the thread off to a detached reaper instead of joining it here, so this call
+        // still returns promptly rather than blocking indefinitely.
+        LOGE("QEMU thread did not exit in 5 s; leaving it running and marking stuck");
+        s_stuck = true;
+
+        pthread_t *tid = malloc(sizeof(pthread_t));
+        *tid = s_thread;
+        pthread_t reaper;
+        pthread_attr_t rattr;
+        pthread_attr_init(&rattr);
+        pthread_attr_setdetachstate(&rattr, PTHREAD_CREATE_DETACHED);
+        pthread_create(&reaper, &rattr, reap_stuck_thread, tid);
+        pthread_attr_destroy(&rattr);
+        // s_stopping is deliberately left set here (not cleared below) until reap_stuck_thread()
+        // confirms the thread is actually gone — see that function's comment.
+        return;
     }
+
+    pthread_join(s_thread, NULL);
 
     if (s_socket_path[0]) {
         unlink(s_socket_path);
@@ -300,6 +363,12 @@ Java_tech_ula_library_qemu_QemuBridge_stop(JNIEnv *env, jobject thiz)
     pthread_mutex_lock(&s_mutex);
     s_stopping = false;
     pthread_mutex_unlock(&s_mutex);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_tech_ula_library_qemu_QemuBridge_isStuck(JNIEnv *env, jobject thiz)
+{
+    return s_stuck ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jboolean JNICALL
