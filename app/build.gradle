@@ -157,6 +157,21 @@ tasks.register('copyUserLandVmApk', Copy) {
 }
 preBuild.dependsOn 'copyUserLandVmApk'
 
+// Same as copyUserLandVmApk, for the companion UserLAnd-QEMU app
+// (github.com/CypherpunkArmory/UserLAnd-QEMU). Run `cd ~/UserLAnd-QEMU && ./gradlew
+// assembleDebug` first.
+tasks.register('copyUserLandQemuApk', Copy) {
+    def qemuDir = project.findProperty('userLandQemuDir') ?: "${System.getProperty('user.home')}/UserLAnd-QEMU"
+    def src = file("${qemuDir}/app/build/outputs/apk/debug/app-debug.apk")
+    def assetsDir = file("src/UserLAnd/assets")
+    onlyIf { src.exists() }
+    from src
+    into assetsDir
+    rename { "userland-qemu.apk" }
+    doFirst { assetsDir.mkdirs() }
+}
+preBuild.dependsOn 'copyUserLandQemuApk'
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.0.2'

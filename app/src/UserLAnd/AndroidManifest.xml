@@ -5,10 +5,12 @@
     <uses-permission android:name="android.permission.CAMERA" tools:node="remove"/>
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:node="remove"/>
     <uses-permission android:name="tech.ula.vm.permission.CONTROL" />
+    <uses-permission android:name="tech.ula.qemu.permission.CONTROL" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <queries>
         <package android:name="tech.ula.vm" />
+        <package android:name="tech.ula.qemu" />
     </queries>
 
     <application
@@ -18,10 +20,10 @@
         android:supportsRtl="true">
 
         <receiver
-            android:name="tech.ula.library.ui.AvfPairingReceiver"
+            android:name="tech.ula.library.ui.InstallPairingReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="tech.ula.library.AVF_PAIR" />
+                <action android:name="tech.ula.library.INSTALL_PAIR" />
             </intent-filter>
         </receiver>
 
