@@ -107,7 +107,8 @@ class MainActivity : AppCompatActivity(), SessionListFragment.SessionSelection, 
                     "sessionActivated" -> handleSessionHasBeenActivated()
                     "dialog" -> {
                         val type = intent.getStringExtra("dialogType") ?: ""
-                        showDialog(type)
+                        val detail = intent.getStringExtra("dialogDetail") ?: ""
+                        showDialog(type, detail)
                     }
                 }
             }
@@ -460,7 +461,7 @@ class MainActivity : AppCompatActivity(), SessionListFragment.SessionSelection, 
     }
 
     // TODO sealed classes?
-    private fun showDialog(dialogType: String) {
+    private fun showDialog(dialogType: String, detail: String = "") {
         when (dialogType) {
             "unhandledSessionServiceType" -> {
                 displayGenericErrorDialog(R.string.general_error_title,
@@ -471,8 +472,12 @@ class MainActivity : AppCompatActivity(), SessionListFragment.SessionSelection, 
                     R.string.alert_need_client_app_message)
             "failedToStartServer" -> {
                 killProgressBar()
-                displayGenericErrorDialog(R.string.general_error_title,
-                    R.string.illegal_state_failed_to_start_server)
+                val message = if (detail.isNotEmpty()) {
+                    "${getString(R.string.illegal_state_failed_to_start_server)}\n\nDetails: $detail"
+                } else {
+                    getString(R.string.illegal_state_failed_to_start_server)
+                }
+                displayGenericErrorDialog(R.string.general_error_title, message)
             }
         }
     }

@@ -20,12 +20,14 @@ class LocalServerManager(
                 .trim().toLong()
     }
 
-    fun startServer(session: Session): Long {
+    data class ServerStartResult(val pid: Long, val errorDetail: String = "")
+
+    fun startServer(session: Session): ServerStartResult {
         return when (session.serviceType) {
             ServiceType.Ssh -> startSSHServer(session)
             ServiceType.Vnc -> startVNCServer(session)
             ServiceType.Xsdl -> setDisplayNumberAndStartTwm(session)
-            else -> 0
+            else -> ServerStartResult(0)
         }
     }
 
@@ -62,24 +64,30 @@ class LocalServerManager(
         if (pidFile.exists()) pidFile.delete()
     }
 
-    private fun startSSHServer(session: Session): Long {
+    private fun startSSHServer(session: Session): ServerStartResult {
         val filesystemDirName = session.filesystemId.toString()
         deletePidFile(session)
         val command = "/support/startSSHServer.sh"
         val result = busyboxExecutor.executeProotCommand(command, filesystemDirName, false)
         return when (result) {
-            is OngoingExecution -> result.process.pid()
+            is OngoingExecution -> ServerStartResult(result.process.pid())
+            is MissingExecutionAsset -> {
+                val details = "func: startSshServer err: MissingExecutionAsset(${result.asset})"
+                val breadcrumb = UlaBreadcrumb("LocalServerManager", BreadcrumbType.RuntimeError, details)
+                logger.addBreadcrumb(breadcrumb)
+                ServerStartResult(-1, "Missing asset: ${result.asset}")
+            }
             is FailedExecution -> {
                 val details = "func: startSshServer err: ${result.reason}"
                 val breadcrumb = UlaBreadcrumb("LocalServerManager", BreadcrumbType.RuntimeError, details)
                 logger.addBreadcrumb(breadcrumb)
-                -1
+                ServerStartResult(-1, result.reason)
             }
-            else -> -1
+            else -> ServerStartResult(-1, "Unknown error")
         }
     }
 
-    private fun startVNCServer(session: Session): Long {
+    private fun startVNCServer(session: Session): ServerStartResult {
         val filesystemDirName = session.filesystemId.toString()
         deletePidFile(session)
         val command = "/support/startVNCServer.sh"
@@ -94,18 +102,24 @@ class LocalServerManager(
                 commandShouldTerminate = false,
                 env = env)
         return when (result) {
-            is OngoingExecution -> result.process.pid()
+            is OngoingExecution -> ServerStartResult(result.process.pid())
+            is MissingExecutionAsset -> {
+                val details = "func: startVncServer err: MissingExecutionAsset(${result.asset})"
+                val breadcrumb = UlaBreadcrumb("LocalServerManager", BreadcrumbType.RuntimeError, details)
+                logger.addBreadcrumb(breadcrumb)
+                ServerStartResult(-1, "Missing asset: ${result.asset}")
+            }
             is FailedExecution -> {
                 val details = "func: startVncServer err: ${result.reason}"
                 val breadcrumb = UlaBreadcrumb("LocalServerManager", BreadcrumbType.RuntimeError, details)
                 logger.addBreadcrumb(breadcrumb)
-                -1
+                ServerStartResult(-1, result.reason)
             }
-            else -> -1
+            else -> ServerStartResult(-1, "Unknown error")
         }
     }
 
-    private fun setDisplayNumberAndStartTwm(session: Session): Long {
+    private fun setDisplayNumberAndStartTwm(session: Session): ServerStartResult {
         val filesystemDirName = session.filesystemId.toString()
         deletePidFile(session)
         val command = "/support/startXSDLServer.sh"
@@ -119,14 +133,20 @@ class LocalServerManager(
                 commandShouldTerminate = false,
                 env = env)
         return when (result) {
-            is OngoingExecution -> result.process.pid()
+            is OngoingExecution -> ServerStartResult(result.process.pid())
+            is MissingExecutionAsset -> {
+                val details = "func: setDisplayNumberAndStartTwm err: MissingExecutionAsset(${result.asset})"
+                val breadcrumb = UlaBreadcrumb("LocalServerManager", BreadcrumbType.RuntimeError, details)
+                logger.addBreadcrumb(breadcrumb)
+                ServerStartResult(-1, "Missing asset: ${result.asset}")
+            }
             is FailedExecution -> {
                 val details = "func: setDisplayNumberAndStartTwm err: ${result.reason}"
                 val breadcrumb = UlaBreadcrumb("LocalServerManager", BreadcrumbType.RuntimeError, details)
                 logger.addBreadcrumb(breadcrumb)
-                -1
+                ServerStartResult(-1, result.reason)
             }
-            else -> -1
+            else -> ServerStartResult(-1, "Unknown error")
         }
     }
 

@@ -45,6 +45,18 @@ fun Context.displayGenericErrorDialog(titleId: Int, messageId: Int, callback: ((
             .create().show()
 }
 
+fun Context.displayGenericErrorDialog(titleId: Int, message: String, callback: (() -> Unit) = {}) {
+    AlertDialog.Builder(this)
+            .setTitle(titleId)
+            .setMessage(message)
+            .setPositiveButton(R.string.button_ok) {
+                dialog, _ ->
+                callback()
+                dialog.dismiss()
+            }
+            .create().show()
+}
+
 inline val Context.defaultSharedPreferences: SharedPreferences
     get() = this.getSharedPreferences("${this.packageName}_preferences", Context.MODE_PRIVATE)
 

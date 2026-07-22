@@ -121,10 +121,12 @@ class ServerService : Service(), CoroutineScope {
 
     private suspend fun startSession(session: Session) {
         startForeground(NotificationConstructor.serviceNotificationId, notificationManager.buildPersistentServiceNotification())
-        session.pid = localServerManager.startServer(session)
+        val result = localServerManager.startServer(session)
+        session.pid = result.pid
 
         if (session.pid == -1L) {
-            sendDialogBroadcast("failedToStartServer")
+            val detail = result.errorDetail.ifEmpty { "No error detail available" }
+            sendDialogBroadcast("failedToStartServer", detail)
             stopForeground(true)
             stopSelf()
             return
@@ -136,7 +138,7 @@ class ServerService : Service(), CoroutineScope {
             delay(500)
             retries++
             if (retries >= maxRetries) {
-                sendDialogBroadcast("failedToStartServer")
+                sendDialogBroadcast("failedToStartServer", "Server process not running after ${maxRetries} retries")
                 stopForeground(true)
                 stopSelf()
                 return
@@ -229,10 +231,11 @@ class ServerService : Service(), CoroutineScope {
         broadcaster.sendBroadcast(intent)
     }
 
-    private fun sendDialogBroadcast(type: String) {
+    private fun sendDialogBroadcast(type: String, detail: String = "") {
         val intent = Intent(SERVER_SERVICE_RESULT)
                 .putExtra("type", "dialog")
                 .putExtra("dialogType", type)
+                .putExtra("dialogDetail", detail)
         broadcaster.sendBroadcast(intent)
     }
 }

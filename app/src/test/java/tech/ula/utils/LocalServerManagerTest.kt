@@ -78,7 +78,7 @@ class LocalServerManagerTest {
 
         val result = localServerManager.startServer(session)
         assertFalse(sshPidFile.exists())
-        assertEquals(fakePid, result)
+        assertEquals(fakePid, result.pid)
     }
 
     @Test
@@ -103,7 +103,7 @@ class LocalServerManagerTest {
         val result = localServerManager.startServer(session)
 
         assertFalse(sshPidFile.exists())
-        assertEquals(-1, result)
+        assertEquals(-1, result.pid)
         verify(mockLogger).addBreadcrumb(any())
     }
 
@@ -129,7 +129,7 @@ class LocalServerManagerTest {
         val result = localServerManager.startServer(session)
 
         assertFalse(vncPidFile.exists())
-        assertEquals(fakePid, result)
+        assertEquals(fakePid, result.pid)
     }
 
     @Test
@@ -155,7 +155,7 @@ class LocalServerManagerTest {
         val result = localServerManager.startServer(session)
 
         assertFalse(vncPidFile.exists())
-        assertEquals(-1, result)
+        assertEquals(-1, result.pid)
         verify(mockLogger).addBreadcrumb(any())
     }
 
@@ -184,7 +184,7 @@ class LocalServerManagerTest {
         val result = localServerManager.startServer(session)
 
         assertFalse(xsdlPidFile.exists())
-        assertEquals(fakePid, result)
+        assertEquals(fakePid, result.pid)
     }
 
     @Test
@@ -213,7 +213,7 @@ class LocalServerManagerTest {
         val result = localServerManager.startServer(session)
 
         assertFalse(xsdlPidFile.exists())
-        assertEquals(-1, result)
+        assertEquals(-1, result.pid)
         verify(mockLogger).addBreadcrumb(any())
     }
 
