@@ -52,16 +52,13 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug
 
-      - name: Build androidTest APK
-        run: ./gradlew assembleDebugAndroidTest
-
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Start Android emulator
+      - name: Start Android emulator and run test
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
@@ -71,63 +68,217 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
           script: |
+            set -e
+
             echo "=== Emulator booted ==="
             adb shell getprop ro.build.version.sdk
             adb shell getprop ro.product.cpu.abi
 
-            echo "=== Installing APKs ==="
+            echo "=== Installing APK ==="
             adb install -r app/build/outputs/apk/debug/app-debug.apk
-            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 
             echo "=== Granting permissions ==="
             adb shell pm grant com.scisammy.ubuntuandroid android.permission.READ_EXTERNAL_STORAGE || true
             adb shell pm grant com.scisammy.ubuntuandroid android.permission.WRITE_EXTERNAL_STORAGE || true
 
+            echo "=== Pre-check: native libs ==="
+            adb shell "find /data/app/ -name 'lib_proot*' 2>/dev/null" || echo "no proot lib found"
+            adb shell "find /data/app/ -name 'lib_busybox*' 2>/dev/null" || echo "no busybox lib found"
+
             echo "=== Clearing logcat ==="
             adb logcat -c
 
-            echo "=== Running instrumentation tests ==="
-            adb shell am instrument -w -e class tech.ula.ui.UbuntuLaunchTest com.scisammy.ubuntuandroid.test/androidx.test.runner.AndroidJUnitRunner 2>&1 || true
+            echo "=== Launching app ==="
+            adb shell am start -n com.scisammy.ubuntuandroid/.MainActivity
+            sleep 5
 
-            echo "=== Capturing logcat ==="
-            adb logcat -d -s "tech.ula:*" "busybox:*" "ULA:*" "System.out:*" "System.err:*" > /tmp/logcat.txt 2>&1 || true
+            echo "=== UI dump after launch ==="
+            adb shell uiautomator dump /sdcard/ui_launch.xml 2>/dev/null || true
+            adb pull /sdcard/ui_launch.xml /tmp/ui_launch.xml 2>/dev/null || true
+            cat /tmp/ui_launch.xml 2>/dev/null || echo "no ui dump"
 
-            echo "=== Checking if server is running ==="
-            adb shell "netstat -tlnp 2>/dev/null | grep 2022" || echo "Port 2022 not listening"
-            adb shell "ps -ef 2>/dev/null | grep dropbear" || echo "No dropbear process"
-            adb shell "ps -ef 2>/dev/null | grep proot" || echo "No proot process"
+            echo "=== Check logcat for errors ==="
+            adb logcat -d | grep -i "error\|exception\|crash\|fatal\|missing" | tail -30 || echo "no errors found"
 
-            echo "=== Listing support dir ==="
-            adb shell "ls -la /data/data/com.scisammy.ubuntuandroid/files/support/ 2>/dev/null" || echo "Support dir not found"
-            adb shell "ls -la /data/data/com.scisammy.ubuntuandroid/files/ 2>/dev/null" || echo "Files dir not found"
+            echo "=== Wait for app list to load (20s) ==="
+            sleep 20
 
-            echo "=== Dumping UI hierarchy ==="
-            adb shell uiautomator dump /sdcard/ui_dump.xml 2>/dev/null || true
-            adb pull /sdcard/ui_dump.xml /tmp/ui_dump.xml 2>/dev/null || true
+            echo "=== UI dump after wait ==="
+            adb shell uiautomator dump /sdcard/ui_loaded.xml 2>/dev/null || true
+            adb pull /sdcard/ui_loaded.xml /tmp/ui_loaded.xml 2>/dev/null || true
+            cat /tmp/ui_loaded.xml 2>/dev/null || echo "no ui dump"
 
-            echo "=== Taking screenshot ==="
-            adb shell screencap -p /sdcard/screenshot.png 2>/dev/null || true
-            adb pull /sdcard/screenshot.png /tmp/screenshot.png 2>/dev/null || true
+            echo "=== Look for Ubuntu in the list ==="
+            adb shell uiautomator dump /sdcard/ui_full.xml 2>/dev/null || true
+            adb pull /sdcard/ui_full.xml /tmp/ui_full.xml 2>/dev/null || true
+            grep -i "ubuntu" /tmp/ui_full.xml 2>/dev/null || echo "Ubuntu not found in UI"
 
-            echo "=== Checking filesystem dirs ==="
-            adb shell "ls /data/data/com.scisammy.ubuntuandroid/files/ 2>/dev/null" || echo "No files dir"
+            echo "=== Try clicking Ubuntu (first app item) ==="
+            # Get bounds of first list item and click center
+            BOUNDS=$(adb shell uiautomator dump /dev/tty 2>/dev/null | grep -oP 'resource-id="com.scisammy.ubuntuandroid:id/apps_name"[^>]*bounds="\[\d+,\d+\]\[\d+,\d+\]"' | head -1 | grep -oP 'bounds="\[\d+,\d+\]\[\d+,\d+\]"')
+            echo "Ubuntu bounds: $BOUNDS"
+            if [ -n "$BOUNDS" ]; then
+              # Parse bounds
+              X1=$(echo "$BOUNDS" | grep -oP '\[(\d+),' | head -1 | tr -dc '0-9')
+              Y1=$(echo "$BOUNDS" | grep -oP ',(\d+)\]' | head -1 | tr -dc '0-9')
+              X2=$(echo "$BOUNDS" | grep -oP '\[(\d+),' | tail -1 | tr -dc '0-9')
+              Y2=$(echo "$BOUNDS" | grep -oP ',(\d+)\]' | tail -1 | tr -dc '0-9')
+              CX=$(( (X1 + X2) / 2 ))
+              CY=$(( (Y1 + Y2) / 2 ))
+              echo "Clicking at ($CX, $CY)"
+              adb shell input tap $CX $CY
+            else
+              echo "Could not find Ubuntu, trying tap at common position"
+              adb shell input tap 540 400
+            fi
+            sleep 3
+
+            echo "=== UI dump after clicking Ubuntu ==="
+            adb shell uiautomator dump /sdcard/ui_after_click.xml 2>/dev/null || true
+            adb pull /sdcard/ui_after_click.xml /tmp/ui_after_click.xml 2>/dev/null || true
+            cat /tmp/ui_after_click.xml 2>/dev/null || echo "no ui dump"
+
+            echo "=== Check for credentials dialog ==="
+            adb shell "dumpsys activity top | grep -i 'ACTIVITY\|DIALOG\|EditText\|username\|password'" || true
+
+            echo "=== Type username ==="
+            adb shell input tap 540 300
+            sleep 1
+            adb shell input text "user"
+            adb shell input keyevent 61  # TAB
+            sleep 1
+            adb shell input text "pass"
+            adb shell input keyevent 61  # TAB
+            adb shell input text "vncpass"
+            sleep 1
+
+            echo "=== Click OK button (positive button in dialog) ==="
+            # Dialog positive button is typically at bottom-right
+            adb shell uiautomator dump /sdcard/ui_dialog.xml 2>/dev/null || true
+            adb pull /sdcard/ui_dialog.xml /tmp/ui_dialog.xml 2>/dev/null || true
+            # Find the OK button
+            OK_BOUNDS=$(cat /tmp/ui_dialog.xml 2>/dev/null | grep -oP 'text="OK"[^>]*bounds="\[\d+,\d+\]\[\d+,\d+\]"' | grep -oP 'bounds="\[\d+,\d+\]\[\d+,\d+\]"')
+            if [ -n "$OK_BOUNDS" ]; then
+              X1=$(echo "$OK_BOUNDS" | grep -oP '\[(\d+),' | head -1 | tr -dc '0-9')
+              Y1=$(echo "$OK_BOUNDS" | grep -oP ',(\d+)\]' | head -1 | tr -dc '0-9')
+              X2=$(echo "$OK_BOUNDS" | grep -oP '\[(\d+),' | tail -1 | tr -dc '0-9')
+              Y2=$(echo "$OK_BOUNDS" | grep -oP ',(\d+)\]' | tail -1 | tr -dc '0-9')
+              CX=$(( (X1 + X2) / 2 ))
+              CY=$(( (Y1 + Y2) / 2 ))
+              echo "Clicking OK at ($CX, $CY)"
+              adb shell input tap $CX $CY
+            else
+              echo "OK button not found, pressing enter"
+              adb shell input keyevent 66  # ENTER
+            fi
+            sleep 3
+
+            echo "=== UI dump after credentials ==="
+            adb shell uiautomator dump /sdcard/ui_after_creds.xml 2>/dev/null || true
+            adb pull /sdcard/ui_after_creds.xml /tmp/ui_after_creds.xml 2>/dev/null || true
+            cat /tmp/ui_after_creds.xml 2>/dev/null || echo "no ui dump"
+
+            echo "=== Check for SSH radio button ==="
+            adb shell uiautomator dump /sdcard/ui_conn.xml 2>/dev/null || true
+            adb pull /sdcard/ui_conn.xml /tmp/ui_conn.xml 2>/dev/null || true
+            SSH_BOUNDS=$(cat /tmp/ui_conn.xml 2>/dev/null | grep -oP 'text="SSH"[^>]*bounds="\[\d+,\d+\]\[\d+,\d+\]"' | grep -oP 'bounds="\[\d+,\d+\]\[\d+,\d+\]"')
+            if [ -n "$SSH_BOUNDS" ]; then
+              X1=$(echo "$SSH_BOUNDS" | grep -oP '\[(\d+),' | head -1 | tr -dc '0-9')
+              Y1=$(echo "$SSH_BOUNDS" | grep -oP ',(\d+)\]' | head -1 | tr -dc '0-9')
+              X2=$(echo "$SSH_BOUNDS" | grep -oP '\[(\d+),' | tail -1 | tr -dc '0-9')
+              Y2=$(echo "$SSH_BOUNDS" | grep -oP ',(\d+)\]' | tail -1 | tr -dc '0-9')
+              CX=$(( (X1 + X2) / 2 ))
+              CY=$(( (Y1 + Y2) / 2 ))
+              echo "Clicking SSH at ($CX, $CY)"
+              adb shell input tap $CX $CY
+            fi
+            sleep 1
+
+            echo "=== Click OK for connection type ==="
+            adb shell uiautomator dump /sdcard/ui_conn2.xml 2>/dev/null || true
+            adb pull /sdcard/ui_conn2.xml /tmp/ui_conn2.xml 2>/dev/null || true
+            OK_BOUNDS2=$(cat /tmp/ui_conn2.xml 2>/dev/null | grep -oP 'text="OK"[^>]*bounds="\[\d+,\d+\]\[\d+,\d+\]"' | grep -oP 'bounds="\[\d+,\d+\]\[\d+,\d+\]"')
+            if [ -n "$OK_BOUNDS2" ]; then
+              X1=$(echo "$OK_BOUNDS2" | grep -oP '\[(\d+),' | head -1 | tr -dc '0-9')
+              Y1=$(echo "$OK_BOUNDS2" | grep -oP ',(\d+)\]' | head -1 | tr -dc '0-9')
+              X2=$(echo "$OK_BOUNDS2" | grep -oP '\[(\d+),' | tail -1 | tr -dc '0-9')
+              Y2=$(echo "$OK_BOUNDS2" | grep -oP ',(\d+)\]' | tail -1 | tr -dc '0-9')
+              CX=$(( (X1 + X2) / 2 ))
+              CY=$(( (Y1 + Y2) / 2 ))
+              echo "Clicking OK at ($CX, $CY)"
+              adb shell input tap $CX $CY
+            else
+              adb shell input keyevent 66
+            fi
+
+            echo "=== Waiting for server to start (120s) ==="
+            sleep 10
+
+            echo "=== Progress check (10s) ==="
+            adb shell uiautomator dump /sdcard/ui_progress1.xml 2>/dev/null || true
+            adb pull /sdcard/ui_progress1.xml /tmp/ui_progress1.xml 2>/dev/null || true
+            cat /tmp/ui_progress1.xml 2>/dev/null | grep -oP 'text="[^"]*"' | head -20 || true
+
+            sleep 20
+
+            echo "=== Progress check (30s) ==="
+            adb shell uiautomator dump /sdcard/ui_progress2.xml 2>/dev/null || true
+            adb pull /sdcard/ui_progress2.xml /tmp/ui_progress2.xml 2>/dev/null || true
+            cat /tmp/ui_progress2.xml 2>/dev/null | grep -oP 'text="[^"]*"' | head -20 || true
+
+            sleep 30
+
+            echo "=== Progress check (60s) ==="
+            adb shell uiautomator dump /sdcard/ui_progress3.xml 2>/dev/null || true
+            adb pull /sdcard/ui_progress3.xml /tmp/ui_progress3.xml 2>/dev/null || true
+            cat /tmp/ui_progress3.xml 2>/dev/null | grep -oP 'text="[^"]*"' | head -20 || true
+
+            sleep 30
+
+            echo "=== Progress check (90s) ==="
+            adb shell uiautomator dump /sdcard/ui_progress4.xml 2>/dev/null || true
+            adb pull /sdcard/ui_progress4.xml /tmp/ui_progress4.xml 2>/dev/null || true
+            cat /tmp/ui_progress4.xml 2>/dev/null | grep -oP 'text="[^"]*"' | head -20 || true
+
+            sleep 30
+
+            echo "=== Final diagnostics (120s+) ==="
+            adb shell uiautomator dump /sdcard/ui_final.xml 2>/dev/null || true
+            adb pull /sdcard/ui_final.xml /tmp/ui_final.xml 2>/dev/null || true
+
+            echo "=== Final UI state ==="
+            cat /tmp/ui_final.xml 2>/dev/null | grep -oP 'text="[^"]*"' | head -30 || true
+
+            echo "=== Support directory ==="
+            adb shell "ls -la /data/data/com.scisammy.ubuntuandroid/files/support/ 2>/dev/null" || echo "support dir not found"
+
+            echo "=== Files directory ==="
+            adb shell "ls -la /data/data/com.scisammy.ubuntuandroid/files/ 2>/dev/null" || echo "files dir not found"
+
+            echo "=== Check port 2022 ==="
+            adb shell "netstat -tlnp 2>/dev/null | grep 2022" || echo "port 2022 not listening"
+
+            echo "=== Check proot/dropbear processes ==="
+            adb shell "ps -ef 2>/dev/null | grep -E 'proot|dropbear|busybox'" || echo "no relevant processes"
+
+            echo "=== Logcat errors ==="
+            adb logcat -d | grep -iE "error|exception|fail|missing|crash" | grep -v "chromium\|DEBUG\|sentry" | tail -50 || echo "no errors"
+
+            echo "=== Logcat ula tags ==="
+            adb logcat -d -s "Ula:*" "ULA:*" "tech.ula:*" "LocalServerManager:*" "BusyboxExecutor:*" | tail -50 || true
+
+            echo "=== Screenshot ==="
+            adb shell screencap -p /sdcard/screenshot_final.png 2>/dev/null || true
+            adb pull /sdcard/screenshot_final.png /tmp/screenshot_final.png 2>/dev/null || true
 
             echo "=== DONE ==="
 
-      - name: Upload logcat
+      - name: Upload UI dumps
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: logcat
-          path: /tmp/logcat.txt
-          if-no-files-found: ignore
-
-      - name: Upload UI dump
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ui-dump
-          path: /tmp/ui_dump.xml
+          name: ui-dumps
+          path: /tmp/ui_*.xml
           if-no-files-found: ignore
 
       - name: Upload screenshot
@@ -135,5 +286,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: screenshot
-          path: /tmp/screenshot.png
+          path: /tmp/screenshot_final.png
           if-no-files-found: ignore
