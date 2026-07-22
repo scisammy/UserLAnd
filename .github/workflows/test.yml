@@ -1,0 +1,139 @@
+name: Test Ubuntu Launch
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/21.4.7075529
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 for SDK tools
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Accept Android SDK licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: Remove broken pre-installed NDK
+        run: rm -rf $ANDROID_HOME/ndk/27*
+
+      - name: Install SDK platforms, build tools, NDK, and emulator
+        run: |
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-30" \
+            "build-tools;30.0.3" \
+            "ndk;21.4.7075529" \
+            "emulator" \
+            "system-images;android-30;google_apis;x86_64"
+
+      - name: Set up JDK 11 for Gradle build
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 11
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Fetch PRoot assets
+        run: ./gradlew fetchAssets --stacktrace
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Build androidTest APK
+        run: ./gradlew assembleDebugAndroidTest
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Start Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            echo "=== Emulator booted ==="
+            adb shell getprop ro.build.version.sdk
+            adb shell getprop ro.product.cpu.abi
+
+            echo "=== Installing APKs ==="
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+
+            echo "=== Granting permissions ==="
+            adb shell pm grant com.scisammy.ubuntuandroid android.permission.READ_EXTERNAL_STORAGE || true
+            adb shell pm grant com.scisammy.ubuntuandroid android.permission.WRITE_EXTERNAL_STORAGE || true
+
+            echo "=== Clearing logcat ==="
+            adb logcat -c
+
+            echo "=== Running instrumentation tests ==="
+            adb shell am instrument -w -e class tech.ula.ui.UbuntuLaunchTest com.scisammy.ubuntuandroid.test/androidx.test.runner.AndroidJUnitRunner 2>&1 || true
+
+            echo "=== Capturing logcat ==="
+            adb logcat -d -s "tech.ula:*" "busybox:*" "ULA:*" "System.out:*" "System.err:*" > /tmp/logcat.txt 2>&1 || true
+
+            echo "=== Checking if server is running ==="
+            adb shell "netstat -tlnp 2>/dev/null | grep 2022" || echo "Port 2022 not listening"
+            adb shell "ps -ef 2>/dev/null | grep dropbear" || echo "No dropbear process"
+            adb shell "ps -ef 2>/dev/null | grep proot" || echo "No proot process"
+
+            echo "=== Listing support dir ==="
+            adb shell "ls -la /data/data/com.scisammy.ubuntuandroid/files/support/ 2>/dev/null" || echo "Support dir not found"
+            adb shell "ls -la /data/data/com.scisammy.ubuntuandroid/files/ 2>/dev/null" || echo "Files dir not found"
+
+            echo "=== Dumping UI hierarchy ==="
+            adb shell uiautomator dump /sdcard/ui_dump.xml 2>/dev/null || true
+            adb pull /sdcard/ui_dump.xml /tmp/ui_dump.xml 2>/dev/null || true
+
+            echo "=== Taking screenshot ==="
+            adb shell screencap -p /sdcard/screenshot.png 2>/dev/null || true
+            adb pull /sdcard/screenshot.png /tmp/screenshot.png 2>/dev/null || true
+
+            echo "=== Checking filesystem dirs ==="
+            adb shell "ls /data/data/com.scisammy.ubuntuandroid/files/ 2>/dev/null" || echo "No files dir"
+
+            echo "=== DONE ==="
+
+      - name: Upload logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logcat
+          path: /tmp/logcat.txt
+          if-no-files-found: ignore
+
+      - name: Upload UI dump
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-dump
+          path: /tmp/ui_dump.xml
+          if-no-files-found: ignore
+
+      - name: Upload screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot
+          path: /tmp/screenshot.png
+          if-no-files-found: ignore
