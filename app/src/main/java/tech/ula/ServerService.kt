@@ -123,8 +123,24 @@ class ServerService : Service(), CoroutineScope {
         startForeground(NotificationConstructor.serviceNotificationId, notificationManager.buildPersistentServiceNotification())
         session.pid = localServerManager.startServer(session)
 
+        if (session.pid == -1L) {
+            sendDialogBroadcast("failedToStartServer")
+            stopForeground(true)
+            stopSelf()
+            return
+        }
+
+        val maxRetries = 60
+        var retries = 0
         while (!localServerManager.isServerRunning(session)) {
             delay(500)
+            retries++
+            if (retries >= maxRetries) {
+                sendDialogBroadcast("failedToStartServer")
+                stopForeground(true)
+                stopSelf()
+                return
+            }
         }
 
         session.active = true

@@ -112,6 +112,7 @@
     <string name="illegal_state_insufficient_storage">Failed to detect sufficient storage.  Try increasing the available storage on your device to at least 250 MB.</string>
     <string name="illegal_state_unhandled_session_service_type">Trying to start a session with an unknown service type.</string>
     <string name="illegal_state_busybox_missing">Busybox is required for this operation. Try running a session to make sure it is installed.</string>
+    <string name="illegal_state_failed_to_start_server">Failed to start the Linux server. Try clearing support files or reinstalling the app.</string>
 
     <!-- Prompts -->
     <string name="prompt_filesystem">Filesystem:</string>
