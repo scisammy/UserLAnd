@@ -61,6 +61,7 @@ class MainActivity : AppCompatActivity(), SessionListFragment.SessionSelection, 
     private var progressBarIsVisible = false
     private var currentFragmentDisplaysProgressDialog = false
     private var autoStarted = false
+    private var ciAutoMode = false
 
     private val logger = SentryLogger()
     private val ulaFiles by lazy { UlaFiles(this, this.applicationInfo.nativeLibraryDir) }
@@ -249,7 +250,8 @@ class MainActivity : AppCompatActivity(), SessionListFragment.SessionSelection, 
                 appHasBeenSelected(autoApp, true)
             }
 
-        if (isDebugBuild && !autoStarted) {
+        if (isDebugBuild && intent?.getBooleanExtra("auto_start_ubuntu", false) == true && !autoStarted) {
+            ciAutoMode = true
             val ubuntuApp = App(
                 name = "ubuntu",
                 category = "distribution",
@@ -440,7 +442,7 @@ class MainActivity : AppCompatActivity(), SessionListFragment.SessionSelection, 
     }
 
     private fun handleUserInputState(state: UserInputRequiredState) {
-        if (isDebugBuild) {
+        if (ciAutoMode) {
             return when (state) {
                 is LowStorageAcknowledgementRequired -> {
                     viewModel.lowAvailableStorageAcknowledged()

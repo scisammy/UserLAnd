@@ -120,7 +120,7 @@ jobs:
             adb logcat -c || true
 
             echo "=== Launching app (debug auto-start will select Ubuntu) ==="
-            adb shell am start -W -n com.scisammy.ubuntuandroid/tech.ula.MainActivity || true
+            adb shell am start -W -n com.scisammy.ubuntuandroid/tech.ula.MainActivity --ez auto_start_ubuntu true || true
 
             echo "=== Waiting 30s for app init and auto-start ==="
             sleep 30
