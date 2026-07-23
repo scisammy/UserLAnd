@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.app.DownloadManager
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import android.content.pm.ApplicationInfo
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -31,7 +32,6 @@ import androidx.navigation.Navigation
 import androidx.navigation.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.NavigationUI.setupWithNavController
-import com.scisammy.ubuntuandroid.BuildConfig
 import com.google.gson.Gson
 import kotlinx.android.synthetic.main.activity_main.* // ktlint-disable no-wildcard-imports
 import kotlinx.coroutines.CoroutineScope
@@ -55,6 +55,8 @@ import tech.ula.utils.preferences.* // ktlint-disable no-wildcard-imports
 class MainActivity : AppCompatActivity(), SessionListFragment.SessionSelection, AppsListFragment.AppSelection, FilesystemListFragment.FilesystemListProgress {
 
     val className = "MainActivity"
+
+    private val isDebugBuild get() = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
     private var progressBarIsVisible = false
     private var currentFragmentDisplaysProgressDialog = false
@@ -247,7 +249,7 @@ class MainActivity : AppCompatActivity(), SessionListFragment.SessionSelection, 
                 appHasBeenSelected(autoApp, true)
             }
 
-        if (BuildConfig.DEBUG && !autoStarted) {
+        if (isDebugBuild && !autoStarted) {
             val ubuntuApp = App(
                 name = "ubuntu",
                 category = "distribution",
@@ -438,7 +440,7 @@ class MainActivity : AppCompatActivity(), SessionListFragment.SessionSelection, 
     }
 
     private fun handleUserInputState(state: UserInputRequiredState) {
-        if (BuildConfig.DEBUG) {
+        if (isDebugBuild) {
             return when (state) {
                 is LowStorageAcknowledgementRequired -> {
                     viewModel.lowAvailableStorageAcknowledged()
