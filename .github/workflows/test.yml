@@ -115,6 +115,7 @@ jobs:
             echo "=== Granting permissions again after clear ==="
             adb shell pm grant com.scisammy.ubuntuandroid android.permission.READ_EXTERNAL_STORAGE || true
             adb shell pm grant com.scisammy.ubuntuandroid android.permission.WRITE_EXTERNAL_STORAGE || true
+            adb shell pm grant com.scisammy.ubuntuandroid android.permission.POST_NOTIFICATIONS || true
 
             echo "=== Clearing logcat ==="
             adb logcat -c || true
