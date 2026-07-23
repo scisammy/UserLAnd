@@ -101,7 +101,7 @@ jobs:
             echo "=== UI after launch ==="
             adb shell uiautomator dump /sdcard/ui1.xml || true
             adb pull /sdcard/ui1.xml /tmp/ui1.xml || true
-            cat /tmp/ui1.xml | sed 's/>/>\n/g' | grep -o 'text="[^"]*"' | grep -v 'text=""'
+            cat /tmp/ui1.xml | tr '>' '\n' | grep 'text=' | grep -v 'text=""' | head -30 || echo "parse error"
 
             echo "=== Dismissing error report dialog (tap NOT REALLY) ==="
             adb shell input tap 278 143
@@ -114,7 +114,7 @@ jobs:
             echo "=== UI after tapping Ubuntu ==="
             adb shell uiautomator dump /sdcard/ui2.xml || true
             adb pull /sdcard/ui2.xml /tmp/ui2.xml || true
-            cat /tmp/ui2.xml | tr '>' '\n' | grep -E 'text="[^"]' | head -20
+            cat /tmp/ui2.xml | tr '>' '\n' | grep -E 'text="[^"]' | head -20 || echo "parse error"
 
             echo "=== Entering credentials ==="
             adb shell input tap 540 300
@@ -135,7 +135,7 @@ jobs:
             echo "=== UI after credentials ==="
             adb shell uiautomator dump /sdcard/ui3.xml || true
             adb pull /sdcard/ui3.xml /tmp/ui3.xml || true
-            cat /tmp/ui3.xml | tr '>' '\n' | grep -E 'text="[^"]' | head -20
+            cat /tmp/ui3.xml | tr '>' '\n' | grep -E 'text="[^"]' | head -20 || echo "parse error"
 
             echo "=== Selecting SSH ==="
             adb shell input tap 540 400
@@ -146,21 +146,21 @@ jobs:
             echo "=== UI after SSH selection ==="
             adb shell uiautomator dump /sdcard/ui4.xml || true
             adb pull /sdcard/ui4.xml /tmp/ui4.xml || true
-            cat /tmp/ui4.xml | tr '>' '\n' | grep -E 'text="[^"]' | head -20
+            cat /tmp/ui4.xml | tr '>' '\n' | grep -E 'text="[^"]' | head -20 || echo "parse error"
 
             echo "=== Waiting for download + setup (3 min) ==="
-            for i in $(seq 1 12); do
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
               sleep 15
-              echo "--- Check $((i * 15))s ---"
+              echo "--- Check $i ---"
               adb shell uiautomator dump /sdcard/ui_check.xml || true
               adb pull /sdcard/ui_check.xml /tmp/ui_check.xml || true
-              cat /tmp/ui_check.xml | tr '>' '\n' | grep -oE 'text="[^"]*"' | grep -v 'text=""' | head -15
+              cat /tmp/ui_check.xml | tr '>' '\n' | grep 'text=' | grep -v 'text=""' | head -15 || echo "no texts"
             done
 
             echo "=== Final UI ==="
             adb shell uiautomator dump /sdcard/ui_final.xml || true
             adb pull /sdcard/ui_final.xml /tmp/ui_final.xml || true
-            cat /tmp/ui_final.xml | tr '>' '\n' | grep -oE 'text="[^"]*"' | grep -v 'text=""' | head -30
+            cat /tmp/ui_final.xml | tr '>' '\n' | grep 'text=' | grep -v 'text=""' | head -30 || echo "no texts"
 
             echo "=== Logcat ula tags ==="
             adb logcat -d | grep -iE "tech\.ula|ServerService|LocalServer|MissingExec|FailedExec|startSSH|execInProot|proot|busybox|setupLinks|UlaApp" | tail -80 || echo "no ula logs"
