@@ -91,79 +91,65 @@ jobs:
             adb shell pm grant com.scisammy.ubuntuandroid android.permission.READ_EXTERNAL_STORAGE || true
             adb shell pm grant com.scisammy.ubuntuandroid android.permission.WRITE_EXTERNAL_STORAGE || true
 
+            echo "=== Clearing app data for fresh start ==="
+            adb shell pm clear com.scisammy.ubuntuandroid || true
+            sleep 2
+
+            echo "=== Granting permissions again after clear ==="
+            adb shell pm grant com.scisammy.ubuntuandroid android.permission.READ_EXTERNAL_STORAGE || true
+            adb shell pm grant com.scisammy.ubuntuandroid android.permission.WRITE_EXTERNAL_STORAGE || true
+
             echo "=== Clearing logcat ==="
             adb logcat -c || true
 
-            echo "=== Launching app ==="
+            echo "=== Launching app (debug auto-start will select Ubuntu) ==="
             adb shell am start -W -n com.scisammy.ubuntuandroid/tech.ula.MainActivity || true
-            sleep 10
 
-            echo "=== UI after launch ==="
-            adb shell uiautomator dump /sdcard/ui1.xml || true
-            adb pull /sdcard/ui1.xml /tmp/ui1.xml || true
+            echo "=== Waiting 30s for app init and auto-start ==="
+            sleep 30
 
-            echo "=== Dismiss error dialog ==="
-            adb shell input tap 278 143 || true
-            sleep 3
+            echo "=== UI dump after 30s ==="
+            adb shell uiautomator dump /sdcard/ui_30s.xml || true
+            adb pull /sdcard/ui_30s.xml /tmp/ui_30s.xml || true
 
-            echo "=== Tap Ubuntu ==="
-            adb shell input tap 540 496 || true
-            sleep 5
+            echo "=== Logcat after 30s ==="
+            adb logcat -d > /tmp/logcat_30s.txt || true
 
-            echo "=== UI after Ubuntu tap ==="
-            adb shell uiautomator dump /sdcard/ui2.xml || true
-            adb pull /sdcard/ui2.xml /tmp/ui2.xml || true
+            echo "=== Waiting 60s more (download/setup progress) ==="
+            sleep 60
 
-            echo "=== Enter credentials ==="
-            adb shell input tap 540 909 || true
-            sleep 1
-            adb shell input text "user" || true
-            adb shell input keyevent 61 || true
-            sleep 0.5
-            adb shell input text "password" || true
-            adb shell input keyevent 61 || true
-            sleep 0.5
-            adb shell input text "password" || true
-            sleep 1
-            adb shell input tap 854 1113 || true
-            sleep 5
+            echo "=== UI dump after 90s ==="
+            adb shell uiautomator dump /sdcard/ui_90s.xml || true
+            adb pull /sdcard/ui_90s.xml /tmp/ui_90s.xml || true
 
-            echo "=== UI after credentials ==="
-            adb shell uiautomator dump /sdcard/ui3.xml || true
-            adb pull /sdcard/ui3.xml /tmp/ui3.xml || true
+            echo "=== Logcat after 90s ==="
+            adb logcat -d > /tmp/logcat_90s.txt || true
 
-            echo "=== Select SSH ==="
-            adb shell uiautomator dump /sdcard/ui3b.xml || true
-            adb pull /sdcard/ui3b.xml /tmp/ui3b.xml || true
-            sleep 2
+            echo "=== Waiting 120s more ==="
+            sleep 120
 
-            echo "=== UI after SSH ==="
-            adb shell uiautomator dump /sdcard/ui4.xml || true
-            adb pull /sdcard/ui4.xml /tmp/ui4.xml || true
+            echo "=== UI dump after 210s ==="
+            adb shell uiautomator dump /sdcard/ui_210s.xml || true
+            adb pull /sdcard/ui_210s.xml /tmp/ui_210s.xml || true
 
-            echo "=== Waiting for download ==="
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_1.xml && adb pull /sdcard/ui_check_1.xml /tmp/ui_check_1.xml || true
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_2.xml && adb pull /sdcard/ui_check_2.xml /tmp/ui_check_2.xml || true
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_3.xml && adb pull /sdcard/ui_check_3.xml /tmp/ui_check_3.xml || true
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_4.xml && adb pull /sdcard/ui_check_4.xml /tmp/ui_check_4.xml || true
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_5.xml && adb pull /sdcard/ui_check_5.xml /tmp/ui_check_5.xml || true
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_6.xml && adb pull /sdcard/ui_check_6.xml /tmp/ui_check_6.xml || true
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_7.xml && adb pull /sdcard/ui_check_7.xml /tmp/ui_check_7.xml || true
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_8.xml && adb pull /sdcard/ui_check_8.xml /tmp/ui_check_8.xml || true
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_9.xml && adb pull /sdcard/ui_check_9.xml /tmp/ui_check_9.xml || true
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_10.xml && adb pull /sdcard/ui_check_10.xml /tmp/ui_check_10.xml || true
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_11.xml && adb pull /sdcard/ui_check_11.xml /tmp/ui_check_11.xml || true
-            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_12.xml && adb pull /sdcard/ui_check_12.xml /tmp/ui_check_12.xml || true
+            echo "=== Logcat after 210s ==="
+            adb logcat -d > /tmp/logcat_210s.txt || true
 
-            echo "=== Final UI ==="
-            adb shell uiautomator dump /sdcard/ui_final.xml || true
-            adb pull /sdcard/ui_final.xml /tmp/ui_final.xml || true
+            echo "=== Waiting 180s more (long wait for extraction/server start) ==="
+            sleep 180
 
-            echo "=== Logcat ula ==="
-            adb logcat -d | grep -i -E "tech.ula|ServerService|LocalServer|MissingExec|FailedExec|startSSH|execInProot|proot|busybox|setupLinks|UlaApp|FATAL|AndroidRuntime" > /tmp/logcat_filtered.txt || true
+            echo "=== UI dump after 390s ==="
+            adb shell uiautomator dump /sdcard/ui_390s.xml || true
+            adb pull /sdcard/ui_390s.xml /tmp/ui_390s.xml || true
 
             echo "=== Processes ==="
             adb shell ps -A > /tmp/ps_output.txt || true
+
+            echo "=== Logcat ula filtered ==="
+            adb logcat -d | grep -i -E "tech.ula|ServerService|LocalServer|MissingExec|FailedExec|startSSH|execInProot|proot|busybox|setupLinks|UlaApp|FATAL|AndroidRuntime|DEBUG" > /tmp/logcat_filtered.txt || true
+
+            echo "=== Full logcat ==="
+            adb logcat -d > /tmp/logcat_full.txt || true
 
             echo "=== Screenshot ==="
             adb shell screencap -p /sdcard/screen.png || true
@@ -177,8 +163,12 @@ jobs:
         with:
           name: test-results
           path: |
-            /tmp/ui*.xml
+            /tmp/ui_*.xml
             /tmp/screen.png
             /tmp/logcat_filtered.txt
+            /tmp/logcat_full.txt
+            /tmp/logcat_30s.txt
+            /tmp/logcat_90s.txt
+            /tmp/logcat_210s.txt
             /tmp/ps_output.txt
           if-no-files-found: ignore

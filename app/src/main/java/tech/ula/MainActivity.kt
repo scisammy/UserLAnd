@@ -31,6 +31,7 @@ import androidx.navigation.Navigation
 import androidx.navigation.findNavController
 import androidx.navigation.ui.NavigationUI
 import androidx.navigation.ui.NavigationUI.setupWithNavController
+import com.scisammy.ubuntuandroid.BuildConfig
 import com.google.gson.Gson
 import kotlinx.android.synthetic.main.activity_main.* // ktlint-disable no-wildcard-imports
 import kotlinx.coroutines.CoroutineScope
@@ -245,6 +246,20 @@ class MainActivity : AppCompatActivity(), SessionListFragment.SessionSelection, 
                 autoStarted = true
                 appHasBeenSelected(autoApp, true)
             }
+
+        if (BuildConfig.DEBUG && !autoStarted) {
+            val ubuntuApp = App(
+                name = "ubuntu",
+                category = "distribution",
+                filesystemRequired = "ubuntu",
+                supportsCli = true,
+                supportsGui = true,
+                isPaidApp = false,
+                version = 1
+            )
+            autoStarted = true
+            appHasBeenSelected(ubuntuApp, true)
+        }
     }
 
     override fun onStart() {
@@ -423,6 +438,25 @@ class MainActivity : AppCompatActivity(), SessionListFragment.SessionSelection, 
     }
 
     private fun handleUserInputState(state: UserInputRequiredState) {
+        if (BuildConfig.DEBUG) {
+            return when (state) {
+                is LowStorageAcknowledgementRequired -> {
+                    viewModel.lowAvailableStorageAcknowledged()
+                }
+                is FilesystemCredentialsRequired -> {
+                    viewModel.submitFilesystemCredentials("user", "password", "password")
+                }
+                is AppServiceTypePreferenceRequired -> {
+                    viewModel.submitAppServiceType(ServiceType.Ssh)
+                }
+                is LargeDownloadRequired -> {
+                    viewModel.startAssetDownloads(state.downloadRequirements)
+                }
+                is ActiveSessionsMustBeDeactivated -> {
+                    displayGenericErrorDialog(R.string.general_error_title, R.string.deactivate_sessions)
+                }
+            }
+        }
         return when (state) {
             is LowStorageAcknowledgementRequired -> {
                 displayLowStorageDialog()
