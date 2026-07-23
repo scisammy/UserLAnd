@@ -115,7 +115,7 @@ jobs:
             adb pull /sdcard/ui2.xml /tmp/ui2.xml || true
 
             echo "=== Enter credentials ==="
-            adb shell input tap 540 300 || true
+            adb shell input tap 540 909 || true
             sleep 1
             adb shell input text "user" || true
             adb shell input keyevent 61 || true
@@ -125,7 +125,7 @@ jobs:
             sleep 0.5
             adb shell input text "password" || true
             sleep 1
-            adb shell input keyevent 66 || true
+            adb shell input tap 854 1113 || true
             sleep 5
 
             echo "=== UI after credentials ==="
@@ -133,24 +133,27 @@ jobs:
             adb pull /sdcard/ui3.xml /tmp/ui3.xml || true
 
             echo "=== Select SSH ==="
-            adb shell input tap 540 400 || true
-            sleep 1
-            adb shell input keyevent 66 || true
-            sleep 5
+            adb shell uiautomator dump /sdcard/ui3b.xml || true
+            adb pull /sdcard/ui3b.xml /tmp/ui3b.xml || true
+            sleep 2
 
             echo "=== UI after SSH ==="
             adb shell uiautomator dump /sdcard/ui4.xml || true
             adb pull /sdcard/ui4.xml /tmp/ui4.xml || true
 
-            echo "=== Waiting 3 min for download ==="
-            i=1
-            while [ "$i" -le 12 ]; do
-              sleep 15
-              echo "--- Check $i ---"
-              adb shell uiautomator dump /sdcard/ui_check_$i.xml || true
-              adb pull /sdcard/ui_check_$i.xml /tmp/ui_check_$i.xml || true
-              i=$((i + 1))
-            done
+            echo "=== Waiting for download ==="
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_1.xml && adb pull /sdcard/ui_check_1.xml /tmp/ui_check_1.xml || true
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_2.xml && adb pull /sdcard/ui_check_2.xml /tmp/ui_check_2.xml || true
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_3.xml && adb pull /sdcard/ui_check_3.xml /tmp/ui_check_3.xml || true
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_4.xml && adb pull /sdcard/ui_check_4.xml /tmp/ui_check_4.xml || true
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_5.xml && adb pull /sdcard/ui_check_5.xml /tmp/ui_check_5.xml || true
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_6.xml && adb pull /sdcard/ui_check_6.xml /tmp/ui_check_6.xml || true
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_7.xml && adb pull /sdcard/ui_check_7.xml /tmp/ui_check_7.xml || true
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_8.xml && adb pull /sdcard/ui_check_8.xml /tmp/ui_check_8.xml || true
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_9.xml && adb pull /sdcard/ui_check_9.xml /tmp/ui_check_9.xml || true
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_10.xml && adb pull /sdcard/ui_check_10.xml /tmp/ui_check_10.xml || true
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_11.xml && adb pull /sdcard/ui_check_11.xml /tmp/ui_check_11.xml || true
+            sleep 15 && adb shell uiautomator dump /sdcard/ui_check_12.xml && adb pull /sdcard/ui_check_12.xml /tmp/ui_check_12.xml || true
 
             echo "=== Final UI ==="
             adb shell uiautomator dump /sdcard/ui_final.xml || true
