@@ -38,7 +38,7 @@
         android:extractNativeLibs="true"
         tools:replace="android:allowBackup, android:label, android:supportsRtl, android:theme">
 
-        <activity android:name=".MainActivity" android:launchMode="singleTask">
+        <activity android:name="tech.ula.MainActivity" android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <action android:name="android.intent.action.VIEW" />
@@ -52,7 +52,7 @@
         </activity>
 
         <service
-            android:name=".ServerService"
+            android:name="tech.ula.ServerService"
             android:stopWithTask="true" />
 
         <provider

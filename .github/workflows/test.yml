@@ -97,7 +97,7 @@ jobs:
             adb logcat -c
 
             echo "=== Launching app ==="
-            adb shell am start -W -n com.scisammy.ubuntuandroid/.MainActivity
+            adb shell am start -W -n com.scisammy.ubuntuandroid/tech.ula.MainActivity
             LAUNCH_EXIT=$?
             echo "Launch exit code: $LAUNCH_EXIT"
 
