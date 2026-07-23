@@ -28,6 +28,23 @@ jobs:
       - name: Remove broken pre-installed NDK
         run: rm -rf $ANDROID_HOME/ndk/27*
 
+      - name: Remove incompatible pre-installed SDK platforms
+        run: |
+          for dir in $ANDROID_HOME/platforms/android-*; do
+            platform=$(basename "$dir")
+            if [ "$platform" != "android-30" ]; then
+              echo "Removing incompatible platform: $platform"
+              rm -rf "$dir"
+            fi
+          done
+          for dir in $ANDROID_HOME/build-tools/*; do
+            bt=$(basename "$dir")
+            if [ "$bt" != "30.0.3" ]; then
+              echo "Removing incompatible build-tools: $bt"
+              rm -rf "$dir"
+            fi
+          done
+
       - name: Install SDK platforms, build tools, NDK, emulator, and system image
         run: |
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
