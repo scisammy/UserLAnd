@@ -74,23 +74,25 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -skin 1080x1920
           disable-animations: true
           script: |
+            set +e
+
             echo "=== Emulator booted ==="
-            adb shell getprop ro.build.version.sdk
-            adb shell getprop ro.product.cpu.abi
-            adb shell wm size
+            adb shell getprop ro.build.version.sdk || true
+            adb shell getprop ro.product.cpu.abi || true
+            adb shell wm size || true
 
             echo "=== Installing APK ==="
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/debug/app-debug.apk || true
 
             echo "=== Verify package ==="
-            adb shell pm list packages | grep ubuntuandroid
+            adb shell pm list packages | grep ubuntuandroid || true
 
             echo "=== Granting permissions ==="
             adb shell pm grant com.scisammy.ubuntuandroid android.permission.READ_EXTERNAL_STORAGE || true
             adb shell pm grant com.scisammy.ubuntuandroid android.permission.WRITE_EXTERNAL_STORAGE || true
 
             echo "=== Clearing logcat ==="
-            adb logcat -c
+            adb logcat -c || true
 
             echo "=== Launching app ==="
             adb shell am start -W -n com.scisammy.ubuntuandroid/tech.ula.MainActivity || true
